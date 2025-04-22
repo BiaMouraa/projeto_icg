@@ -1,1 +1,7 @@
 .vscode
+
+# Ignora arquivos sem extensão (executáveis comuns em C/C++)
+*.out
+*.exe
+
+app
