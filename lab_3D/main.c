@@ -5,7 +5,7 @@
 #endif
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
+#include <unistd.h>
 #include "labirinto3D.h"
 
 void display(void) {
@@ -16,11 +16,7 @@ void display(void) {
     viewport_perspectiva();
 
     glutSwapBuffers();
-}
-
-void timer(int value) {
-    glutPostRedisplay();
-    glutTimerFunc(10, timer, 0);
+    usleep(1000);
 }
 
 void specialKeys(int key, int x, int y) {
@@ -36,6 +32,10 @@ void specialKeys(int key, int x, int y) {
             break;
         case GLUT_KEY_UP:
             caminhaPraFrente();
+            break;
+        case (27):
+            exit(0);
+        default:
             break;
     }
     glutPostRedisplay();
@@ -65,9 +65,9 @@ int main(int argc, char** argv) {
     init();
 
     glutDisplayFunc(display);
+    glutIdleFunc(display);
     glutSpecialFunc(specialKeys);
     glutKeyboardFunc(keyboard);
-    glutTimerFunc(10, timer, 0);
 
     glutMainLoop();
     return 0;
