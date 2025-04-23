@@ -1,42 +1,123 @@
 #include "labirinto3D.h"
 #include <stdio.h>
+#include <math.h>
 
+#define GIRO_VAL 300
+#define GIRO_ANG (90.0/GIRO_VAL)
+#define MAX_DIST_PAREDE 0.01f
+#define incr 0.01
 float sizeX = 0.1f;
 float sizeY = 1.0f;
 
 //=======================================================
+
+struct coord{
+    int tipo; //0 horizontal
+    double x1, y1, x2, y2;
+};
+
+int Nparedes = 4;
+struct coord paredes[4] = {{0,-0.75f, 0.75f, 0.75f, 0.75f},
+                           {0,-0.75f,-0.75f, 0.75f,-0.75f},
+                           {1, 0.75f, 0.75f, 0.75f,-0.75f},
+                           {1,-0.75f, 0.75f,-0.75f,-0.75f}};
+
+//=======================================================
+
 double posXY[2] = {0.0f,0.0f};
 int anguloZTopo[4] = {0,90,180,270};
 int anguloZPersp[4] = {180,270,0,90};
 int idx_anguloZ = 0;
+int idx_anguloZ_ant = 0;
+int giro = 0, giro_dir = 1;
+
+int Npasso = 21, idx_passo = 10;
+const double passo[21] = {-0.0167f, -0.0165f, -0.0160f, -0.0153f, -0.0144f, -0.0133f,
+                          -0.0123f, -0.0114f, -0.0106f, -0.0102f, -0.0100f, -0.0102f,
+                          -0.0106f, -0.0114f, -0.0123f, -0.0133f, -0.0144f, -0.0153f,
+                          -0.0160f, -0.0165f, -0.0167};
 
 //=======================================================
 void viraEsquerda(){
-    idx_anguloZ--;
-    if(idx_anguloZ < 0)
-        idx_anguloZ = 3;
+    if(giro == 0){
+        giro = GIRO_VAL;
+        giro_dir = -1;
+        idx_anguloZ_ant = idx_anguloZ;
+
+        idx_anguloZ--;
+        if(idx_anguloZ < 0)
+            idx_anguloZ = 3;
+    }
 }
 
 void viraDireita(){
-    idx_anguloZ = (idx_anguloZ + 1) % 4;
+    if(giro == 0){
+        giro = GIRO_VAL;
+        giro_dir = +1;
+        idx_anguloZ_ant = idx_anguloZ;
+
+        idx_anguloZ = (idx_anguloZ + 1) % 4;
+    }
+}
+
+void caminhaXY(double xk, double yk, int frente){
+    int i, caminha = 1;
+    int tipo_parede = idx_anguloZ % 2;
+    double numerador, denominador;
+
+    for(i = 0; i < Nparedes; i++){
+        if(paredes[i].tipo == tipo_parede){
+            numerador = (xk - paredes[i].x1) * (paredes[i].y2 - paredes[i].y1) -
+                        (yk - paredes[i].y1) * (paredes[i].x2 - paredes[i].x1);
+            numerador = numerador * numerador;
+
+            denominador = (paredes[i].x1 - paredes[i].x2) * (paredes[i].x1 - paredes[i].x2) +
+                          (paredes[i].y1 - paredes[i].y2) * (paredes[i].y1 - paredes[i].y2);
+
+            if(fabs(numerador / denominador) < MAX_DIST_PAREDE){
+                caminha = 0;
+                break;
+            }
+        }
+    }
+
+    if(caminha){
+        posXY[0] = xk;
+        posXY[1] = yk;
+        if(frente)
+            idx_passo = (idx_passo + 1) % Npasso;
+        else{
+            idx_passo--;
+            if(idx_passo < 0)
+                idx_passo = Npasso - 1;
+        }
+
+    }
 }
 
 void caminhaPraFrente(){
+    if(giro > 0)
+        return;
+
     switch(idx_anguloZ){
-        case 0: posXY[1] -= incr; break;
-        case 1: posXY[0] -= incr; break;
-        case 2: posXY[1] += incr; break;
-        case 3: posXY[0] += incr; break;
+        case 0: caminhaXY(posXY[0],posXY[1]-incr, 1); break;
+        case 1: caminhaXY(posXY[0]-incr,posXY[1], 1); break;
+        case 2: caminhaXY(posXY[0],posXY[1]+incr, 1); break;
+        case 3: caminhaXY(posXY[0]+incr,posXY[1], 1); break;
     }
 }
 
 void caminhaPraTras(){
+    if(giro > 0)
+        return;
+
     switch(idx_anguloZ){
-        case 0: posXY[1] += incr; break;
-        case 1: posXY[0] += incr; break;
-        case 2: posXY[1] -= incr; break;
-        case 3: posXY[0] -= incr; break;
+        case 0: caminhaXY(posXY[0],posXY[1]+incr, 0); break;
+        case 1: caminhaXY(posXY[0]+incr,posXY[1], 0); break;
+        case 2: caminhaXY(posXY[0],posXY[1]-incr, 0); break;
+        case 3: caminhaXY(posXY[0]-incr,posXY[1], 0); break;
     }
+
 }
 
 //=======================================================
@@ -52,7 +133,14 @@ void viewport_perspectiva(){
     glLoadIdentity();
 
     glRotatef(-90, 1.0f, 0.0f, 0.0f); //ajusta a visao
-    glRotatef(anguloZPersp[idx_anguloZ], 0.0f, 0.0f, 1.0f); //vira nos corredores
+
+    if(giro > 0){
+        giro--;
+        int var_ang = giro_dir * (GIRO_VAL - giro) * GIRO_ANG;
+        glRotatef(var_ang + anguloZPersp[idx_anguloZ_ant], 0.0f, 0.0f, 1.0f); //vira nos corredores
+    }else
+        glRotatef(anguloZPersp[idx_anguloZ], 0.0f, 0.0f, 1.0f);
+
     glPushMatrix();
         glTranslatef(-posXY[0],-posXY[1],-0.01f);
         draw_perspectiva();
@@ -117,7 +205,14 @@ void viewport_topo(){
 
     glPushMatrix();
         glTranslatef(posXY[0],posXY[1],0.0f);
-        glRotatef(-anguloZTopo[idx_anguloZ], 0.0f, 0.0f, 1.0f); //vira nos corredores
+
+        if(giro > 0){
+            giro--;
+            int var_ang = giro_dir * (GIRO_VAL - giro) * GIRO_ANG;
+            glRotatef(-(var_ang + anguloZTopo[idx_anguloZ_ant]), 0.0f, 0.0f, 1.0f); //vira nos corredores
+        }else
+            glRotatef(-anguloZTopo[idx_anguloZ], 0.0f, 0.0f, 1.0f);
+
         draw_obj();
     glPopMatrix();
 }
