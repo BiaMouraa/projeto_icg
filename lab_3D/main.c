@@ -6,14 +6,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 #include "labirinto3D.h"
+
+Labirinto3D *lab3d;
 
 void display(void) {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    viewport_topo();
-    viewport_perspectiva();
+    desenha_labirinto3d(lab3d);
 
     glutSwapBuffers();
     usleep(1000);
@@ -22,19 +24,17 @@ void display(void) {
 void specialKeys(int key, int x, int y) {
     switch (key) {
         case GLUT_KEY_RIGHT:
-            viraDireita();
+            viraDireita(lab3d);
             break;
         case GLUT_KEY_DOWN:
-            caminhaPraTras();
+            caminhaPraTras(lab3d);
             break;
         case GLUT_KEY_LEFT:
-            viraEsquerda();
+            viraEsquerda(lab3d);
             break;
         case GLUT_KEY_UP:
-            caminhaPraFrente();
+            caminhaPraFrente(lab3d);
             break;
-        case (27):
-            exit(0);
         default:
             break;
     }
@@ -64,11 +64,16 @@ int main(int argc, char** argv) {
 
     init();
 
+    srand(time(NULL));
+    lab3d = cria_labirinto3D();
+
     glutDisplayFunc(display);
     glutIdleFunc(display);
     glutSpecialFunc(specialKeys);
     glutKeyboardFunc(keyboard);
 
     glutMainLoop();
+
+    destroi_labirinto3D(lab3d);
     return 0;
 }

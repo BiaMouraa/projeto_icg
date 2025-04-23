@@ -9,15 +9,14 @@ extern float sizeY;
 #define tamanho 512
 #define incr 0.01
 
-void viraEsquerda();
-void viraDireita();
+typedef struct labirinto3D Labirinto3D;
 
-void caminhaPraFrente();
-void caminhaPraTras();
+void viraEsquerda(Labirinto3D* lab3d);
+void viraDireita(Labirinto3D* lab3d);
 
-void viewport_topo();
-void viewport_perspectiva();
+void caminhaPraFrente(Labirinto3D* lab3d);
+void caminhaPraTras(Labirinto3D* lab3d);
 
-void draw_perspectiva();
-void draw_obj();
-void draw_topo();
+void desenha_labirinto3d(Labirinto3D* lab3d);
+Labirinto3D* cria_labirinto3D();
+void destroi_labirinto3D(Labirinto3D* lab3d);
