@@ -53,6 +53,8 @@ void draw_topo(struct lista_paredes *paredes);
 void draw_perspectiva(struct lista_paredes *paredes);
 
 struct lista_paredes *monta_labirinto();
+double distanciaSegmentoReta(double xk, double yk, struct coord *p);
+int pontoDentroSegmentoReta(double xk, double yk, struct coord *p, int tipo_parede);
 
 //=======================================================
 
@@ -122,6 +124,32 @@ void viraDireita(Labirinto3D* lab3d){
     //printf("verificar parede %d\n",lab3d->idx_anguloZ %2);
 }
 
+double distanciaSegmentoReta(double xk, double yk, struct coord *p){
+    double numerador = (xk - p->x1) * (p->y2 - p->y1) -
+                       (yk - p->y1) * (p->x2 - p->x1);
+    numerador = numerador * numerador;
+
+    double denominador = (p->x1 - p->x2) * (p->x1 - p->x2) +
+                         (p->y1 - p->y2) * (p->y1 - p->y2);
+
+    double t = fabs(numerador / denominador);
+    return t;
+}
+
+int pontoDentroSegmentoReta(double xk, double yk, struct coord *p, int tipo_parede){
+    if(tipo_parede == 0){
+        ///parede horizontal
+        if((p->x1 <= xk && xk <= p->x2) || (p->x2 <= xk && xk <= p->x1))
+           return 1;
+    }else{
+        ///parede vertical
+        if((p->y1 <= yk && yk <= p->y2) || (p->y2 <= yk && yk <= p->y1))
+            return 1;
+    }
+
+    return 0;
+}
+
 void caminhaXY(Labirinto3D* lab3d, double dx, double dy, int frente){
     if(lab3d == NULL)
         return;
@@ -135,6 +163,22 @@ void caminhaXY(Labirinto3D* lab3d, double dx, double dy, int frente){
 
     struct lista_paredes *paredes = lab3d->paredes;
 
+    for(i = 0; i < paredes->qtd; i++){
+        if(paredes->CO[i].tipo == tipo_parede){
+
+            if(!pontoDentroSegmentoReta(xk,yk,&paredes->CO[i],tipo_parede)){
+                continue;
+            }
+
+            dist_antes = distanciaSegmentoReta(lab3d->posX,lab3d->posY,&paredes->CO[i]);
+            dist_depois = distanciaSegmentoReta(xk,yk,&paredes->CO[i]);
+
+            if(dist_depois < dist_antes && dist_depois < MAX_DIST_PAREDE){
+                caminha = 0;
+                break;
+            }
+        }
+    }
 
     if(caminha){
         lab3d->posX = xk;
