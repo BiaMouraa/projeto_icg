@@ -1,9 +1,12 @@
 #include "labirinto3D.h"
 #include "Grafo.h"
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+GLuint texID_teto;
 
 //=========================================================
 #define N 10
@@ -73,6 +76,37 @@ const double passo[21] = {-0.0167f, -0.0165f, -0.0160f, -0.0153f, -0.0144f, -0.0
 
 //=======================================================
 
+void carregaTextura() {
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("ceu.png", &width, &height, &nrChannels, 0);
+    
+    if (data) {
+        glGenTextures(1, &texID_teto);
+        glBindTexture(GL_TEXTURE_2D, texID_teto);
+        
+        // Configura os parâmetros da textura
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        
+        // Carrega a imagem baseada no número de canais
+        GLenum format = GL_RGB;
+        if (nrChannels == 4)
+            format = GL_RGBA;
+        else if (nrChannels == 1)
+            format = GL_RED;
+        
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        
+        stbi_image_free(data);
+    } else {
+        printf("Falha ao carregar textura\n");
+        exit(1);
+    }
+}
+
 Labirinto3D* cria_labirinto3D(){
     Labirinto3D* lab3d = malloc(sizeof(Labirinto3D));
     if(lab3d != NULL){
@@ -93,6 +127,7 @@ void destroi_labirinto3D(Labirinto3D* lab3d){
     free(lab3d->paredes->CO);
     free(lab3d->paredes);
     free(lab3d);
+    glDeleteTextures(1, &texID_teto); 
 }
 
 void viraEsquerda(Labirinto3D* lab3d){
@@ -259,7 +294,7 @@ void viewport_perspectiva(Labirinto3D* lab3d){
     }
 
     glPushMatrix();
-    glTranslatef(-lab3d->posX,-lab3d->posY,passo[lab3d->idx_passo]);
+    glTranslatef(-lab3d->posX,-lab3d->posY, passo[lab3d->idx_passo]-0.03f);
     draw_perspectiva(lab3d->paredes);
     glPopMatrix();
 }
@@ -272,6 +307,18 @@ void draw_perspectiva(struct lista_paredes *paredes){
         glVertex3f(-1.0f,-1.0f, 0.0f);
         glVertex3f(-1.0f, 1.0f, 0.0f);
     glEnd();
+
+    // Desenha o teto com textura
+    glBindTexture(GL_TEXTURE_2D, texID_teto);
+    glBegin(GL_QUADS);
+        glColor3f(1.0f, 1.0f, 1.0f);  // Cor branca para manter as cores originais da textura
+        glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, 1.0f, 0.1f);
+        glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,-1.0f, 0.1f);
+        glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,-1.0f, 0.1f);
+        glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f, 1.0f, 0.1f);
+    glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);  // Desativa textura
+
 
     int i;
     glColor3f(0.0,0.0,1.0);
@@ -287,8 +334,8 @@ void draw_perspectiva(struct lista_paredes *paredes){
         glBegin(GL_QUADS);
             glVertex3f(paredes->CO[i].x1, paredes->CO[i].y1, 0.00f);
             glVertex3f(paredes->CO[i].x2, paredes->CO[i].y2, 0.00f);
-            glVertex3f(paredes->CO[i].x2, paredes->CO[i].y2, 0.05f);
-            glVertex3f(paredes->CO[i].x1, paredes->CO[i].y1, 0.05f);
+            glVertex3f(paredes->CO[i].x2, paredes->CO[i].y2, 0.1f);
+            glVertex3f(paredes->CO[i].x1, paredes->CO[i].y1, 0.1f);
         glEnd();
     }
 }

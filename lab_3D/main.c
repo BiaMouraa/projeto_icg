@@ -53,6 +53,9 @@ void init(void) {
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+
+    glEnable(GL_TEXTURE_2D);
+    carregaTextura();
 }
 
 int main(int argc, char** argv) {

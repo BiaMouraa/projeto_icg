@@ -4,6 +4,9 @@
 #include <GL/glut.h>
 #endif
 
+extern GLuint texID_ceu;
+void carregaTextura();
+
 extern float sizeX;
 extern float sizeY;
 #define tamanho 512
