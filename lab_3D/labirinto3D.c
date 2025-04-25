@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#define M_PI 3.14159265358979323846
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -24,7 +25,6 @@ float sizeX = 0.1f;
 float sizeY = 1.0f;
 
 //=======================================================
-#define NanguloZ 4
 
 
 int Nparedes = 4;
@@ -38,15 +38,15 @@ struct lista_paredes{
     struct coord *CO;
 };
 
-struct labirinto3D{
-    double posX, posY;
-    int idx_anguloZ;
-    int idx_anguloZ_ant;
-    int giro;
-    int giro_dir;
-    int idx_passo;
-    struct lista_paredes *paredes;
-};
+// struct labirinto3D{
+//     double posX, posY;
+//     int idx_anguloZ;
+//     int idx_anguloZ_ant;
+//     int giro;
+//     int giro_dir;
+//     int idx_passo;
+//     struct lista_paredes *paredes;
+// };
 
 void viewport_topo(Labirinto3D* lab3d);
 void viewport_perspectiva(Labirinto3D* lab3d);
@@ -62,8 +62,8 @@ int pontoDentroSegmentoReta(double xk, double yk, struct coord *p, int tipo_pare
 //=======================================================
 
 double posXY[2] = {0.0f,0.0f};
-int anguloZTopo[4] = {0,90,180,270};
-int anguloZPersp[4] = {180,270,0,90};
+int anguloZTopo[64];
+int anguloZPersp[64];
 int idx_anguloZ = 0;
 int idx_anguloZ_ant = 0;
 int giro = 0, giro_dir = 1;
@@ -75,6 +75,13 @@ const double passo[21] = {-0.0167f, -0.0165f, -0.0160f, -0.0153f, -0.0144f, -0.0
                           -0.0160f, -0.0165f, -0.0167};
 
 //=======================================================
+
+void inicializaAngulos() {
+    for(int i = 0; i < NanguloZ; i++) {
+        anguloZTopo[i] = (int)(360.0 * i / NanguloZ) % 360;
+        anguloZPersp[i] = (anguloZTopo[i] + 180) % 360;
+    }
+}
 
 void carregaTextura() {
     int width, height, nrChannels;
@@ -117,6 +124,12 @@ Labirinto3D* cria_labirinto3D(){
         lab3d->giro = 0;
         lab3d->giro_dir = 1;
         lab3d->idx_passo = 10;
+        lab3d->girandoEsquerda = 0;
+        lab3d->girandoDireita = 0;
+        lab3d->anguloGiro = 0.0f;
+        lab3d->velocidadeGiro = 0.01f;
+
+        inicializaAngulos();
 
         lab3d->paredes = monta_labirinto();
     }
@@ -194,7 +207,7 @@ void caminhaXY(Labirinto3D* lab3d, double dx, double dy, int frente){
     double dist_antes, dist_depois;
 
     int i, caminha = 1;
-    int tipo_parede = lab3d->idx_anguloZ % 2;
+    int tipo_parede = (fabs(dx) > fabs(dy)) ? 1 : 0; // 1 para vertical, 0 para horizontal
 
     struct lista_paredes *paredes = lab3d->paredes;
 
@@ -230,34 +243,23 @@ void caminhaXY(Labirinto3D* lab3d, double dx, double dy, int frente){
 
 
 void caminhaPraFrente(Labirinto3D* lab3d){
-    if(lab3d == NULL){
-        return;
-    }
+    if(lab3d == NULL) return;
+    if(lab3d->giro > 0) return;
 
-    if(lab3d->giro > 0)
-        return;
-
-    switch(lab3d->idx_anguloZ){
-        case 0: caminhaXY(lab3d, 0.0f, -incr, 1); break;
-        case 1: caminhaXY(lab3d, -incr, 0.0f, 1); break;
-        case 2: caminhaXY(lab3d, 0.0f, +incr, 1); break;
-        case 3: caminhaXY(lab3d, +incr, 0.0f, 1); break;
-    }
+    double angle = anguloZTopo[lab3d->idx_anguloZ] * M_PI / 180.0;
+    double dx = -incr * sin(angle);
+    double dy = -incr * cos(angle);
+    caminhaXY(lab3d, dx, dy, 1);
 }
 
 void caminhaPraTras(Labirinto3D* lab3d){
-    if(lab3d == NULL)
-        return;
+    if(lab3d == NULL) return;
+    if(lab3d->giro > 0) return;
 
-    if(lab3d->giro > 0)
-        return;
-
-    switch(lab3d->idx_anguloZ){
-        case 0: caminhaXY(lab3d, 0.0f, +incr, 0); break;
-        case 1: caminhaXY(lab3d, +incr, 0.0f, 0); break;
-        case 2: caminhaXY(lab3d, 0.0f, -incr, 0); break;
-        case 3: caminhaXY(lab3d, -incr, 0.0f, 0); break;
-    }
+    double angle = anguloZTopo[lab3d->idx_anguloZ] * M_PI / 180.0;
+    double dx = incr * sin(angle);
+    double dy = incr * cos(angle);
+    caminhaXY(lab3d, dx, dy, 0);
 }
 
 void desenha_labirinto3d(Labirinto3D* lab3d){
@@ -285,12 +287,13 @@ void viewport_perspectiva(Labirinto3D* lab3d){
 
     glRotatef(-90, 1.0f, 0.0f, 0.0f); //ajusta a visao
 
-    if(lab3d->giro > 0){
+    if(lab3d->giro > 0) {
         lab3d->giro--;
-        int var_ang = lab3d->giro_dir * (GIRO_VAL - lab3d->giro) * GIRO_ANG;
-        glRotatef(var_ang + anguloZPersp[lab3d->idx_anguloZ_ant], 0.0f, 0.0f, 1.0f); //vira nos corredores
-    }else{
-        glRotatef(anguloZPersp[lab3d->idx_anguloZ], 0.0f, 0.0f, 1.0f); //vira nos corredores
+        float angle_step = 360.0f / NanguloZ;
+        float var_ang = lab3d->giro_dir * (GIRO_VAL - lab3d->giro) * (angle_step/GIRO_VAL);
+        glRotatef(var_ang + anguloZPersp[lab3d->idx_anguloZ_ant], 0.0f, 0.0f, 1.0f);
+    } else {
+        glRotatef(anguloZPersp[lab3d->idx_anguloZ], 0.0f, 0.0f, 1.0f);
     }
 
     glPushMatrix();
@@ -359,12 +362,14 @@ void viewport_topo(Labirinto3D* lab3d){
 
     glPushMatrix();
     glTranslatef(lab3d->posX,lab3d->posY,0.0f);
-        if(lab3d->giro > 0){
-            lab3d->giro--;
-            int var_ang = lab3d->giro_dir * (GIRO_VAL - lab3d->giro) * GIRO_ANG;
-            glRotatef(-(var_ang + anguloZTopo[lab3d->idx_anguloZ_ant]), 0.0f, 0.0f, 1.0f); //vira nos corredores
-        }else
-            glRotatef(-anguloZTopo[lab3d->idx_anguloZ], 0.0f, 0.0f, 1.0f);
+    if(lab3d->giro > 0) {
+        lab3d->giro--;
+        float angle_step = 360.0f / NanguloZ;
+        float var_ang = lab3d->giro_dir * (GIRO_VAL - lab3d->giro) * (angle_step/GIRO_VAL);
+        glRotatef(-(var_ang + anguloZTopo[lab3d->idx_anguloZ_ant]), 0.0f, 0.0f, 1.0f);
+    } else {
+        glRotatef(-anguloZTopo[lab3d->idx_anguloZ], 0.0f, 0.0f, 1.0f);
+    }
         draw_obj();
     glPopMatrix();
 }

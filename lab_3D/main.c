@@ -15,25 +15,35 @@ void display(void) {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    if (lab3d->girandoEsquerda) {
+        lab3d->idx_anguloZ = (lab3d->idx_anguloZ - 1) % NanguloZ;
+        if (lab3d->idx_anguloZ < 0) lab3d->idx_anguloZ = NanguloZ - 1;
+    }
+    if (lab3d->girandoDireita) {
+        lab3d->idx_anguloZ = (lab3d->idx_anguloZ + 1) % NanguloZ;
+    }
+
     desenha_labirinto3d(lab3d);
 
     glutSwapBuffers();
-    usleep(1000);
+    usleep(100000); // Ajuste para controlar a velocidade
 }
 
 void specialKeys(int key, int x, int y) {
     switch (key) {
         case GLUT_KEY_RIGHT:
-            viraDireita(lab3d);
-            break;
-        case GLUT_KEY_DOWN:
-            caminhaPraTras(lab3d);
+            lab3d->girandoDireita = 1;
+            lab3d->girandoEsquerda = 0;
             break;
         case GLUT_KEY_LEFT:
-            viraEsquerda(lab3d);
+            lab3d->girandoEsquerda = 1;
+            lab3d->girandoDireita = 0;
             break;
         case GLUT_KEY_UP:
             caminhaPraFrente(lab3d);
+            break;
+        case GLUT_KEY_DOWN:
+            caminhaPraTras(lab3d);
             break;
         default:
             break;
@@ -41,6 +51,18 @@ void specialKeys(int key, int x, int y) {
     glutPostRedisplay();
 }
 
+void specialKeysUp(int key, int x, int y) {
+    switch (key) {
+        case GLUT_KEY_RIGHT:
+            lab3d->girandoDireita = 0;
+            break;
+        case GLUT_KEY_LEFT:
+            lab3d->girandoEsquerda = 0;
+            break;
+        default:
+            break;
+    }
+}
 void keyboard(unsigned char key, int x, int y) {
     if (key == 27) { // ESC
         exit(0);
@@ -73,6 +95,7 @@ int main(int argc, char** argv) {
     glutDisplayFunc(display);
     glutIdleFunc(display);
     glutSpecialFunc(specialKeys);
+    glutSpecialUpFunc(specialKeysUp);
     glutKeyboardFunc(keyboard);
 
     glutMainLoop();

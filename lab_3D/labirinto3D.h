@@ -12,7 +12,25 @@ extern float sizeY;
 #define tamanho 512
 #define incr 0.01
 
-typedef struct labirinto3D Labirinto3D;
+#define NanguloZ 64
+// int girandoEsquerda = 0;
+// int girandoDireita = 0;
+// float anguloGiro = 0.0f;
+// const float velocidadeGiro = 1.0f;
+
+typedef struct labirinto3D{
+    double posX, posY;
+    int idx_anguloZ;
+    int idx_anguloZ_ant;
+    int giro;
+    int giro_dir;
+    int idx_passo;
+    struct lista_paredes *paredes;
+    int girandoEsquerda;
+    int girandoDireita;
+    float anguloGiro;
+    float velocidadeGiro;
+}Labirinto3D;
 
 void viraEsquerda(Labirinto3D* lab3d);
 void viraDireita(Labirinto3D* lab3d);
