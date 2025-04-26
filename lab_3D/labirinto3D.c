@@ -194,6 +194,12 @@ Labirinto3D* cria_labirinto3D(){
         inicializaAngulos();
 
         lab3d->paredes = monta_labirinto();
+        lab3d->movendoFrente = lab3d->movendoTras = 0;
+        lab3d->maxStamina = 10.0f;       
+        lab3d->stamina = lab3d->maxStamina;
+        lab3d->staminaRegenRate = 2.0f; 
+        lab3d->staminaDrainRate = 2.0f; 
+
     }
     return lab3d;
 }
