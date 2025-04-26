@@ -117,10 +117,10 @@ void carregaTextura() {
 Labirinto3D* cria_labirinto3D(){
     Labirinto3D* lab3d = malloc(sizeof(Labirinto3D));
     if(lab3d != NULL){
-        lab3d->posX = 0.0f;
-        lab3d->posY = 0.0f;
-        lab3d->idx_anguloZ = 0;
-        lab3d->idx_anguloZ_ant = 0;
+        lab3d->posX = 1.0 - TAM/2;
+        lab3d->posY = -1.0 + TAM/2;
+        lab3d->idx_anguloZ = 32;
+        lab3d->idx_anguloZ_ant =0;
         lab3d->giro = 0;
         lab3d->giro_dir = 1;
         lab3d->idx_passo = 10;
