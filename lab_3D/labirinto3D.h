@@ -32,6 +32,10 @@ typedef struct labirinto3D{
     int girandoDireita;
     float anguloGiro;
     float velocidadeGiro;
+    int movendoFrente, movendoTras;
+    float stamina, maxStamina;
+    float staminaRegenRate;
+    float staminaDrainRate;
 }Labirinto3D;
 
 void viraEsquerda(Labirinto3D* lab3d);
