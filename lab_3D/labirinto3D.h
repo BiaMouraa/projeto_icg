@@ -6,6 +6,8 @@
 
 extern GLuint texID_ceu;
 void carregaTextura();
+void carregaTexturaParede();
+void carregaTexturaChao();
 
 extern float sizeX;
 extern float sizeY;

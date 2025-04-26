@@ -78,6 +78,8 @@ void init(void) {
 
     glEnable(GL_TEXTURE_2D);
     carregaTextura();
+    carregaTexturaParede();
+    carregaTexturaChao();
 }
 
 int main(int argc, char** argv) {
