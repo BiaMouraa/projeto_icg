@@ -6,10 +6,25 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <time.h>
+#include <sys/time.h>
 #include "labirinto3D.h"
 
+double posX_ant = 0.0, posY_ant = 0.0;
+
+struct timeval tempoInicial;
+//time_t tempoInicial;
+int chegou = 0;
+double tempoDecorridoAtual = 0.0;
+
 Labirinto3D *lab3d;
+
+void renderBitmapString(float x, float y, void *font, const char *string) {
+    const char *c;
+    glRasterPos2f(x, y);
+    for (c = string; *c != '\0'; c++) {
+        glutBitmapCharacter(font, *c);
+    }
+}
 
 void display(void) {
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
@@ -24,6 +39,41 @@ void display(void) {
     }
 
     desenha_labirinto3d(lab3d);
+
+    if (!chegou) {
+        struct timeval agora;
+        gettimeofday(&agora, NULL);
+    
+        tempoDecorridoAtual = (agora.tv_sec - tempoInicial.tv_sec) + (agora.tv_usec - tempoInicial.tv_usec) / 1e6;
+    
+        double margem = 0.1;
+        //if (lab3d->posX != posX_ant || lab3d->posY != posY_ant){
+        if (lab3d->posX <= (-1.0 + 0.02/2) + margem && lab3d->posY >= (1.0 - 0.02/2) - margem) {
+            chegou = 1; // <-- primeiro marca que chegou
+            printf("Checkpoint: %.2f\n", tempoDecorridoAtual);
+        }
+    }
+
+    // Desenha o tempo na tela
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, tamanho, 0, tamanho);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    char buffer[50];
+    snprintf(buffer, sizeof(buffer), "Tempo: %.2f s", tempoDecorridoAtual);
+
+    glColor3f(1.0f, 1.0f, 1.0f); // Cor branca
+    renderBitmapString(10, tamanho - 20, GLUT_BITMAP_HELVETICA_18, buffer);
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
 
     glutSwapBuffers();
     usleep(100000); // Ajuste para controlar a velocidade
@@ -91,6 +141,9 @@ int main(int argc, char** argv) {
 
     srand(time(NULL));
     lab3d = cria_labirinto3D();
+    gettimeofday(&tempoInicial, NULL);
+    posX_ant = lab3d->posX;
+    posY_ant = lab3d->posY;
 
     glutDisplayFunc(display);
     glutIdleFunc(display);
