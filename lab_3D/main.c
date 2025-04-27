@@ -4,6 +4,7 @@
 #include <GL/glut.h>
 #endif
 
+#include "stb_image.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -21,6 +22,7 @@ int movendoFrente = 0, movendoTras = 0;
 int shiftDown = 0;
 
 Labirinto3D *lab3d;
+GLuint texID_vignette;
 
 void renderBitmapString(float x, float y, void *font, const char *string) {
     const char *c;
@@ -134,12 +136,12 @@ void display(void) {
 
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
-      glLoadIdentity();
-      gluOrtho2D(0, tamanho, 0, tamanho);
+    glLoadIdentity();
+    gluOrtho2D(0, tamanho, 0, tamanho);
     glMatrixMode(GL_MODELVIEW);
     glPushMatrix();
-      glLoadIdentity();
-      glColor3f(1,1,1);
+    glLoadIdentity();
+    glColor3f(1,1,1);
 
       char buf[64];
       snprintf(buf, sizeof(buf), "Tempo: %.2f s", tempoDecorridoAtual);
@@ -153,6 +155,50 @@ void display(void) {
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
+
+    glViewport(0, 0, tamanho, tamanho);
+
+   
+    glEnable(GL_ALPHA_TEST);
+    glAlphaFunc(GL_GREATER, 0.1f); 
+
+    // Desenha a sombra por cima de tudoß
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+        glLoadIdentity();
+        gluOrtho2D(0, tamanho, 0, tamanho);
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+            glLoadIdentity();
+
+            glEnable(GL_DEPTH_TEST);
+
+            glEnable(GL_TEXTURE_2D);
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glBindTexture(GL_TEXTURE_2D, texID_vignette);
+
+            glColor4f(1.0f, 1.0f, 1.0f, 0.4f); // 40% de opacidade
+
+            glBegin(GL_QUADS);
+                glTexCoord2f(0.0f, 0.0f); glVertex2f(0, 0);
+                glTexCoord2f(1.0f, 0.0f); glVertex2f(tamanho, 0);
+                glTexCoord2f(1.0f, 1.0f); glVertex2f(tamanho, tamanho);
+                glTexCoord2f(0.0f, 1.0f); glVertex2f(0, tamanho);
+            glEnd();
+
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glDisable(GL_TEXTURE_2D);
+            glDisable(GL_BLEND); 
+
+            glEnable(GL_DEPTH_TEST);
+
+        glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+
+    glEnable(GL_DEPTH_TEST);
 
     if (chegou) {
         telaCheckpoint();
@@ -223,6 +269,39 @@ void keyboard(unsigned char key, int x, int y) {
     }
 }
 
+void carregaTexturaVignette() {
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("vignette.png", &width, &height, &nrChannels, 4);
+
+    if (!data) {
+        fprintf(stderr, "Falha ao carregar textura de sombra: %s\n", stbi_failure_reason());
+        exit(1);
+    }
+
+    glGenTextures(1, &texID_vignette);
+    glBindTexture(GL_TEXTURE_2D, texID_vignette);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    // Define o formato correto de acordo com a quantidade de canais
+    GLenum format = GL_RGBA;
+    if (nrChannels == 3)
+        format = GL_RGB;
+    else if (nrChannels == 1)
+        format = GL_RED;
+
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+
 void init(void) {
     glShadeModel(GL_SMOOTH);
     glClearDepth(1.0);
@@ -234,6 +313,7 @@ void init(void) {
     carregaTextura();
     carregaTexturaParede();
     carregaTexturaChao();
+    carregaTexturaVignette();
 }
 
 int main(int argc, char** argv) {
