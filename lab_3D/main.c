@@ -52,12 +52,51 @@ void checaCheckpoint(Labirinto3D *lab3d) {
     }
 }
 
+void telaCheckpoint() {
+    glClearColor(0, 0, 0, 1); // Preenche fundo de preto
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+      glLoadIdentity();
+      gluOrtho2D(0, tamanho, 0, tamanho);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+      glLoadIdentity();
+
+      glColor3f(1, 1, 0); // texto amarelo
+
+      char buf[128];
+      snprintf(buf, sizeof(buf), "VOCE CHEGOU!");
+      renderBitmapString(tamanho/2 - 60, tamanho/2 + 20, GLUT_BITMAP_HELVETICA_18, buf);
+
+      snprintf(buf, sizeof(buf), "%.2f segundos", tempoDecorridoAtual);
+      renderBitmapString(tamanho/2 - 50, tamanho/2 - 0, GLUT_BITMAP_HELVETICA_18, buf);
+
+      snprintf(buf, sizeof(buf), "Aperte ESPACO para jogar novamente");
+      renderBitmapString(tamanho/2 - 140, tamanho/2 - 40, GLUT_BITMAP_HELVETICA_18, buf);
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+
+    glutSwapBuffers();
+}
+
+
 void display(void) {
     struct timeval now;
     gettimeofday(&now, NULL);
     double dt = (now.tv_sec - prevFrameTime.tv_sec)
               + (now.tv_usec - prevFrameTime.tv_usec) / 1e6;
     prevFrameTime = now;
+
+    if (chegou) {
+        telaCheckpoint();  // Desenha tela travada
+        return;            // Não atualiza mais nada
+    }
+
 
     glClearColor(0,0,0,0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -115,6 +154,10 @@ void display(void) {
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
 
+    if (chegou) {
+        telaCheckpoint();
+    }
+
     glutSwapBuffers();
     usleep(100000);
 }
@@ -165,6 +208,19 @@ void specialKeysUp(int key, int x, int y) {
 
 void keyboard(unsigned char key, int x, int y) {
     if (key == 27) exit(0); 
+    if (key == 32 && chegou) { // ESPAÇO
+        printf("Reiniciando jogo...\n");
+
+        destroi_labirinto3D(lab3d);  // libera o labirinto antigo
+        lab3d = cria_labirinto3D();  // cria novo labirinto
+        carregaTextura();        // recarrega ceu.png
+        carregaTexturaParede();  // recarrega parede.png
+        carregaTexturaChao();    // recarrega chao.png
+
+        chegou = 0;
+        gettimeofday(&tempoInicial, NULL); // reseta tempo
+        tempoDecorridoAtual = 0.0;
+    }
 }
 
 void init(void) {

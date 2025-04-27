@@ -13,7 +13,7 @@ extern float sizeX;
 extern float sizeY;
 #define tamanho 512
 #define incr 0.01
-#define N 10
+#define N 5
 #define TAM (2.0f / N)
 #define MAT2X(j) ((j)* TAM - 1.0)
 #define MAT2Y(i) (1.0 - (i) * TAM)
