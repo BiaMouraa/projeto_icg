@@ -13,12 +13,6 @@ GLuint texID_parede;
 GLuint texID_chao;
 
 //=========================================================
-#define N 10
-#define TAM (2.0f / N)
-#define MAT2X(j) ((j)* TAM - 1.0)
-#define MAT2Y(i) (1.0 - (i) * TAM)
-
-//=========================================================
 
 #define GIRO_VAL 300
 #define GIRO_ANG (90.0/GIRO_VAL)

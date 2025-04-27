@@ -30,6 +30,28 @@ void renderBitmapString(float x, float y, void *font, const char *string) {
     }
 }
 
+void checaCheckpoint(Labirinto3D *lab3d) {
+    if (chegou) return; // já marcou, não precisa checar de novo
+
+    struct timeval agora;
+    gettimeofday(&agora, NULL);
+
+    tempoDecorridoAtual = (agora.tv_sec - tempoInicial.tv_sec) + (agora.tv_usec - tempoInicial.tv_usec) / 1e6;
+
+    // Definimos a posição da meta no centro da primeira célula
+    double metaX = MAT2X(0) + TAM/2;
+    double metaY = MAT2Y(0) - TAM/2;
+    double raioCheckpoint = TAM/2; // raio = metade do tamanho de uma célula
+
+    double dx = lab3d->posX - metaX;
+    double dy = lab3d->posY - metaY;
+
+    if (dx*dx + dy*dy <= raioCheckpoint * raioCheckpoint) {
+        chegou = 1;
+        printf("Checkpoint: %.2fs\n", tempoDecorridoAtual);
+    }
+}
+
 void display(void) {
     struct timeval now;
     gettimeofday(&now, NULL);
@@ -69,17 +91,7 @@ void display(void) {
 
     desenha_labirinto3d(lab3d);
 
-    if (!chegou) {
-        struct timeval agora;
-        gettimeofday(&agora, NULL);
-        tempoDecorridoAtual = (agora.tv_sec - tempoInicial.tv_sec)
-                           + (agora.tv_usec - tempoInicial.tv_usec) / 1e6;
-        double margem = 0.1;
-        if (lab3d->posX <= -1.0 + margem && lab3d->posY >= 1.0 - margem) {
-            chegou = 1;
-            printf("Checkpoint: %.2f s\n", tempoDecorridoAtual);
-        }
-    }
+    checaCheckpoint(lab3d);
 
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
