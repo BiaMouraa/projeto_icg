@@ -1,4 +1,4 @@
-# 🌟 Labirinto 3D - Projeto de ICG 🌟
+# 🌟 Labirinto 3D 🌟
 
 ## Sobre o Projeto
 Este projeto foi desenvolvido para a disciplina de **Introdução à Computação Gráfica (ICG) - Professor:  Davi Henrique dos Santos**.  
