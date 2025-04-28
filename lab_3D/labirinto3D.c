@@ -3,17 +3,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <unistd.h>   
 #define M_PI 3.14159265358979323846
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 GLuint texID_teto;
-
-//=========================================================
-#define N 10
-#define TAM (2.0f / N)
-#define MAT2X(j) ((j)* TAM - 1.0)
-#define MAT2Y(i) (1.0 - (i) * TAM)
+GLuint texID_parede;
+GLuint texID_chao;
 
 //=========================================================
 
@@ -21,7 +17,7 @@ GLuint texID_teto;
 #define GIRO_ANG (90.0/GIRO_VAL)
 #define MAX_DIST_PAREDE 0.01f
 #define incr 0.01
-float sizeX = 0.1f;
+float sizeX = 0.3f;
 float sizeY = 1.0f;
 
 //=======================================================
@@ -114,6 +110,65 @@ void carregaTextura() {
     }
 }
 
+void carregaTexturaParede() {
+    int width, height, nrChannels;
+    const char *fname = "parede.png";
+
+    char cwd[1024];
+    if (getcwd(cwd, sizeof(cwd))) {
+        printf("Diretório de trabalho: %s\n", cwd);
+    }
+    printf("Tentando stbi_load(\"%s\")...\n", fname);
+    
+    unsigned char *data = stbi_load(fname, &width, &height, &nrChannels, 0);
+    if (!data) {
+        fprintf(stderr, "Falha ao carregar textura de parede: %s\n",
+                stbi_failure_reason());
+        exit(1);
+    }
+    printf("Carregou %dx%d, %d canais\n", width, height, nrChannels);
+
+    glGenTextures(1, &texID_parede);
+    glBindTexture(GL_TEXTURE_2D, texID_parede);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    GLenum format = (nrChannels == 4 ? GL_RGBA :
+                     nrChannels == 1 ? GL_RED :
+                     GL_RGB);
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format,
+                 GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    stbi_image_free(data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void carregaTexturaChao() {
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("chao.png", &width, &height, &nrChannels, 0);
+    if (!data) {
+        fprintf(stderr, "Falha ao carregar textura de chao: %s\n", stbi_failure_reason());
+        exit(1);
+    }
+
+    glGenTextures(1, &texID_chao);
+    glBindTexture(GL_TEXTURE_2D, texID_chao);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    GLenum fmt = (nrChannels == 4 ? GL_RGBA :
+                  nrChannels == 1 ? GL_RED :
+                  GL_RGB);
+    glTexImage2D(GL_TEXTURE_2D, 0, fmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    stbi_image_free(data);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 Labirinto3D* cria_labirinto3D(){
     Labirinto3D* lab3d = malloc(sizeof(Labirinto3D));
     if(lab3d != NULL){
@@ -132,6 +187,12 @@ Labirinto3D* cria_labirinto3D(){
         inicializaAngulos();
 
         lab3d->paredes = monta_labirinto();
+        lab3d->movendoFrente = lab3d->movendoTras = 0;
+        lab3d->maxStamina = 10.0f;       
+        lab3d->stamina = lab3d->maxStamina;
+        lab3d->staminaRegenRate = 2.0f; 
+        lab3d->staminaDrainRate = 2.0f; 
+
     }
     return lab3d;
 }
@@ -266,7 +327,10 @@ void desenha_labirinto3d(Labirinto3D* lab3d){
     if(lab3d == NULL)
         return;
 
-    viewport_topo(lab3d);
+    //viewport_topo(lab3d);
+    if (mostrarTopo) {
+        viewport_topo(lab3d);
+    }
     viewport_perspectiva(lab3d);
 }
 
@@ -302,45 +366,81 @@ void viewport_perspectiva(Labirinto3D* lab3d){
     glPopMatrix();
 }
 
-void draw_perspectiva(struct lista_paredes *paredes){
+void draw_perspectiva(struct lista_paredes *paredes) {
+    // 1) PISO TEXTURIZADO
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texID_chao);
+    glColor3f(1.0f, 1.0f, 1.0f);
     glBegin(GL_QUADS);
-        glColor3f(1.0f, 1.0f, 1.0f);     // plane
-        glVertex3f( 1.0f, 1.0f, 0.0f);
-        glVertex3f( 1.0f,-1.0f, 0.0f);
-        glVertex3f(-1.0f,-1.0f, 0.0f);
-        glVertex3f(-1.0f, 1.0f, 0.0f);
+      // repete N×N tiles (uma célula por tile)
+      glTexCoord2f(0.0f, 0.0f);        glVertex3f( 1.0f,  1.0f, 0.0f);
+      glTexCoord2f((float)N, 0.0f);    glVertex3f( 1.0f, -1.0f, 0.0f);
+      glTexCoord2f((float)N, (float)N);glVertex3f(-1.0f, -1.0f, 0.0f);
+      glTexCoord2f(0.0f,   (float)N);  glVertex3f(-1.0f,  1.0f, 0.0f);
     glEnd();
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
 
-    // Desenha o teto com textura
+    // 2) TETO TEXTURIZADO
+    glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texID_teto);
+    glColor3f(1.0f, 1.0f, 1.0f);
     glBegin(GL_QUADS);
-        glColor3f(1.0f, 1.0f, 1.0f);  // Cor branca para manter as cores originais da textura
-        glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f, 1.0f, 0.1f);
-        glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f,-1.0f, 0.1f);
-        glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f,-1.0f, 0.1f);
-        glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f, 1.0f, 0.1f);
+      glTexCoord2f(0.0f, 0.0f); glVertex3f( 1.0f,  1.0f, 0.1f);
+      glTexCoord2f(1.0f, 0.0f); glVertex3f( 1.0f, -1.0f, 0.1f);
+      glTexCoord2f(1.0f, 1.0f); glVertex3f(-1.0f, -1.0f, 0.1f);
+      glTexCoord2f(0.0f, 1.0f); glVertex3f(-1.0f,  1.0f, 0.1f);
     glEnd();
-    glBindTexture(GL_TEXTURE_2D, 0);  // Desativa textura
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
 
+    // parâmetros de espessura e altura das paredes
+    const float t = 0.05f;   // meia-espessura no plano XY
+    const float h = 0.3f;   // altura em Z
 
-    int i;
-    glColor3f(0.0,0.0,1.0);
-    glLineWidth(2);
-    for(i=0; i< paredes->qtd; i++){
-        switch(i % 4){
-            case 0: glColor3f(1.0f, 0.0f, 0.0f); break;
-            case 1: glColor3f(0.0f, 1.0f, 0.0f); break;
-            case 2: glColor3f(0.0f, 0.0f, 1.0f); break;
-            case 3: glColor3f(1.0f, 1.0f, 0.0f); break;
-        }
+    // 3) PAREDES TEXTURIZADAS
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texID_parede);
+    glColor3f(1.0f, 1.0f, 1.0f);
 
+    for(int i = 0; i < paredes->qtd; i++) {
+        struct coord *p = &paredes->CO[i];
+        float dx = p->x2 - p->x1;
+        float dy = p->y2 - p->y1;
+        float len = sqrtf(dx*dx + dy*dy);
+        if (len < 1e-6f) continue;
+
+        // deslocamento perpendicular ao segmento
+        float ox =  dy / len * t;
+        float oy = -dx / len * t;
+
+        // Face frontal da parede
         glBegin(GL_QUADS);
-            glVertex3f(paredes->CO[i].x1, paredes->CO[i].y1, 0.00f);
-            glVertex3f(paredes->CO[i].x2, paredes->CO[i].y2, 0.00f);
-            glVertex3f(paredes->CO[i].x2, paredes->CO[i].y2, 0.1f);
-            glVertex3f(paredes->CO[i].x1, paredes->CO[i].y1, 0.1f);
+          glTexCoord2f(0.0f, 0.0f); glVertex3f(p->x1 + ox, p->y1 + oy, 0.0f);
+          glTexCoord2f(1.0f, 0.0f); glVertex3f(p->x2 + ox, p->y2 + oy, 0.0f);
+          glTexCoord2f(1.0f, 1.0f); glVertex3f(p->x2 + ox, p->y2 + oy,    h);
+          glTexCoord2f(0.0f, 1.0f); glVertex3f(p->x1 + ox, p->y1 + oy,    h);
+        glEnd();
+
+        // Face traseira da parede
+        glBegin(GL_QUADS);
+          glTexCoord2f(0.0f, 0.0f); glVertex3f(p->x2 - ox, p->y2 - oy, 0.0f);
+          glTexCoord2f(1.0f, 0.0f); glVertex3f(p->x1 - ox, p->y1 - oy, 0.0f);
+          glTexCoord2f(1.0f, 1.0f); glVertex3f(p->x1 - ox, p->y1 - oy,    h);
+          glTexCoord2f(0.0f, 1.0f); glVertex3f(p->x2 - ox, p->y2 - oy,    h);
+        glEnd();
+
+        // Topo da parede
+        glBegin(GL_QUADS);
+          glTexCoord2f(0.0f, 0.0f); glVertex3f(p->x1 + ox, p->y1 + oy,    h);
+          glTexCoord2f(1.0f, 0.0f); glVertex3f(p->x2 + ox, p->y2 + oy,    h);
+          glTexCoord2f(1.0f, 1.0f); glVertex3f(p->x2 - ox, p->y2 - oy,    h);
+          glTexCoord2f(0.0f, 1.0f); glVertex3f(p->x1 - ox, p->y1 - oy,    h);
         glEnd();
     }
+
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glDisable(GL_TEXTURE_2D);
 }
 
 //=======================================================

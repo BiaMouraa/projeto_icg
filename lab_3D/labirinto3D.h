@@ -6,11 +6,18 @@
 
 extern GLuint texID_ceu;
 void carregaTextura();
+void carregaTexturaParede();
+void carregaTexturaChao();
 
 extern float sizeX;
 extern float sizeY;
 #define tamanho 512
 #define incr 0.01
+#define N 5
+#define TAM (2.0f / N)
+#define MAT2X(j) ((j)* TAM - 1.0)
+#define MAT2Y(i) (1.0 - (i) * TAM)
+extern int mostrarTopo;
 
 #define NanguloZ 64
 // int girandoEsquerda = 0;
@@ -30,6 +37,10 @@ typedef struct labirinto3D{
     int girandoDireita;
     float anguloGiro;
     float velocidadeGiro;
+    int movendoFrente, movendoTras;
+    float stamina, maxStamina;
+    float staminaRegenRate;
+    float staminaDrainRate;
 }Labirinto3D;
 
 void viraEsquerda(Labirinto3D* lab3d);
