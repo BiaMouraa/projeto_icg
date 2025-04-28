@@ -12,6 +12,7 @@ struct grafo{
 };
 
 Grafo* cria_Grafo(int nro_vertices, int grau_max){
+    //aloca estrutura do grafo
     Grafo *gr;
     gr = (Grafo*) malloc(sizeof(struct grafo));
     if(gr != NULL){
@@ -20,6 +21,7 @@ Grafo* cria_Grafo(int nro_vertices, int grau_max){
         gr->grau_max = grau_max;
         gr->grau = (int*) calloc(nro_vertices,sizeof(int));
 
+        //aloca lista de arestas e pesos de cada vértice
         gr->arestas = (int**) malloc(nro_vertices * sizeof(int*));
         gr->pesos = (int**) malloc(nro_vertices * sizeof(int*));
         for(i=0; i<nro_vertices; i++){
@@ -31,6 +33,7 @@ Grafo* cria_Grafo(int nro_vertices, int grau_max){
     return gr;
 }
 
+//libera a memória alocada para o grafo
 void libera_Grafo(Grafo* gr){
     if(gr != NULL){
         int i;
@@ -53,10 +56,12 @@ int insereAresta(Grafo* gr, int orig, int dest, int eh_digrafo, int peso){
     if(dest < 0 || dest >= gr->nro_vertices)
         return 0;
 
+    //insere aresta partindo da origem para o destino
     gr->arestas[orig][gr->grau[orig]] = dest;
     gr->pesos[orig][gr->grau[orig]] = peso;
     gr->grau[orig]++;
 
+    //se n for digrafo, insere inversa
     if(eh_digrafo == 0)
         insereAresta(gr,dest,orig,1,peso);
     return 1;
@@ -69,13 +74,14 @@ void arvoreGeradoraMinimaPRIM_Grafo(Grafo *gr, int orig, int *pai){
     for(i=0; i < NV; i++)
         pai[i] = -1;// sem pai
 
-    pai[orig] = orig;
+    pai[orig] = orig; //origem
+    //constroi a arvore
     while(1){
         primeiro = 1;
-        for(i=0; i < NV; i++){//percorre todos os v�rtices
-            if(pai[i] != -1){//achou v�rtices j� visitado
-                for(j=0; j<gr->grau[i]; j++){ // percorre os vizinhos do v�rtice visitado
-                    if(pai[gr->arestas[i][j]] == -1){//achou v�rtice vizinho n�o visitado
+        for(i=0; i < NV; i++){//percorre todos os vertices
+            if(pai[i] != -1){//achou vértices já visitado
+                for(j=0; j<gr->grau[i]; j++){ // percorre os vizinhos do vértice visitado
+                    if(pai[gr->arestas[i][j]] == -1){//achou vértice vizinho não visitado
                          if(primeiro){//procura aresta de menor custo
                             menorPeso = gr->pesos[i][j];
                             orig = i;
