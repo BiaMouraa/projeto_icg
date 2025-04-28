@@ -327,7 +327,10 @@ void desenha_labirinto3d(Labirinto3D* lab3d){
     if(lab3d == NULL)
         return;
 
-    viewport_topo(lab3d);
+    //viewport_topo(lab3d);
+    if (mostrarTopo) {
+        viewport_topo(lab3d);
+    }
     viewport_perspectiva(lab3d);
 }
 

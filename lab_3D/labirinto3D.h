@@ -17,6 +17,7 @@ extern float sizeY;
 #define TAM (2.0f / N)
 #define MAT2X(j) ((j)* TAM - 1.0)
 #define MAT2Y(i) (1.0 - (i) * TAM)
+extern int mostrarTopo;
 
 #define NanguloZ 64
 // int girandoEsquerda = 0;

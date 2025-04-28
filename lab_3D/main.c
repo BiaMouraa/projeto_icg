@@ -4,10 +4,16 @@
 #include <GL/glut.h>
 #endif
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include <math.h>
 #include "labirinto3D.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -23,6 +29,7 @@ double tempoDecorridoAtual = 0.0;
 int movendoFrente = 0, movendoTras = 0;
 int shiftDown = 0;
 
+int mostrarTopo = 1;
 int estadoJogo = 0;
 int mouseX = 0, mouseY = 0;
 GLuint texID_fundoBlur;
@@ -38,20 +45,57 @@ void renderBitmapString(float x, float y, void *font, const char *string) {
 }
 
 void checaCheckpoint(Labirinto3D *lab3d) {
-    if (chegou) return; // já marcou, não precisa checar de novo
+    if (chegou) return;
 
     struct timeval agora;
     gettimeofday(&agora, NULL);
-
     tempoDecorridoAtual = (agora.tv_sec - tempoInicial.tv_sec) + (agora.tv_usec - tempoInicial.tv_usec) / 1e6;
 
-    // Definimos a posição da meta no centro da primeira célula
+    // Posição e raio do checkpoint
     double metaX = MAT2X(0) + TAM/2;
     double metaY = MAT2Y(0) - TAM/2;
-    double raioCheckpoint = TAM/2; // raio = metade do tamanho de uma célula
+    double raioCheckpoint = TAM/2 * 0.75;
 
     double dx = lab3d->posX - metaX;
     double dy = lab3d->posY - metaY;
+
+    if(mostrarTopo){// Salva todos os estados atuais
+    GLint viewport[4];
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+
+    // Configura viewport específico para o círculo
+    glViewport(3*tamanho/4.0 - 20, 5, tamanho/4, tamanho/4);
+    
+    // Configura matrizes apenas para esta região
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluOrtho2D(-1.0, 1.0, -1.0, 1.0);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+
+    // Desenha círculo preenchido
+    glColor3f(1.0f, 0.0f, 0.0f);
+    glBegin(GL_TRIANGLE_FAN);
+        glVertex3f(metaX, metaY, 0.01f);
+        for (int i = 0; i <= 360; i++) {
+            float angle = i * M_PI / 180.0f;
+            glVertex3f(metaX + raioCheckpoint * cos(angle), 
+                      metaY + raioCheckpoint * sin(angle), 
+                      0.01f);
+        }
+    glEnd();
+
+    // Restaura tudo exatamente como estava
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);}
 
     if (dx*dx + dy*dy <= raioCheckpoint * raioCheckpoint) {
         chegou = 1;
@@ -227,6 +271,7 @@ void display(void) {
 
     desenha_labirinto3d(lab3d);
 
+
     checaCheckpoint(lab3d);
 
     glMatrixMode(GL_PROJECTION);
@@ -317,6 +362,10 @@ void keyboard(unsigned char key, int x, int y) {
         chegou = 0;
         gettimeofday(&tempoInicial, NULL); // reseta tempo
         tempoDecorridoAtual = 0.0;
+    }
+    if (key == 'x' || key == 'X') { // Tecla x para alternar visão do topo
+        mostrarTopo = !mostrarTopo;
+        glutPostRedisplay();
     }
 }
 
