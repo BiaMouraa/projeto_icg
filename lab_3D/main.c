@@ -10,6 +10,9 @@
 #include <sys/time.h>
 #include "labirinto3D.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 double posX_ant = 0.0, posY_ant = 0.0;
 struct timeval tempoInicial;
 struct timeval prevFrameTime;
@@ -19,6 +22,10 @@ double tempoDecorridoAtual = 0.0;
 
 int movendoFrente = 0, movendoTras = 0;
 int shiftDown = 0;
+
+int estadoJogo = 0;
+int mouseX = 0, mouseY = 0;
+GLuint texID_fundoBlur;
 
 Labirinto3D *lab3d;
 
@@ -53,7 +60,7 @@ void checaCheckpoint(Labirinto3D *lab3d) {
 }
 
 void telaCheckpoint() {
-    glClearColor(0, 0, 0, 1); // Preenche fundo de preto
+    glClearColor(0.0f, 0.0f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glMatrixMode(GL_PROJECTION);
@@ -64,17 +71,97 @@ void telaCheckpoint() {
     glPushMatrix();
       glLoadIdentity();
 
-      glColor3f(1, 1, 0); // texto amarelo
+      float centerX = tamanho / 2.0f;
+
+      glColor3f(1.0f, 0.84f, 0.0f);
 
       char buf[128];
+      
       snprintf(buf, sizeof(buf), "VOCE CHEGOU!");
-      renderBitmapString(tamanho/2 - 60, tamanho/2 + 20, GLUT_BITMAP_HELVETICA_18, buf);
+      renderBitmapString(centerX - 90, tamanho/2 + 50, GLUT_BITMAP_TIMES_ROMAN_24, buf);
 
       snprintf(buf, sizeof(buf), "%.2f segundos", tempoDecorridoAtual);
-      renderBitmapString(tamanho/2 - 50, tamanho/2 - 0, GLUT_BITMAP_HELVETICA_18, buf);
+      renderBitmapString(centerX - 70, tamanho/2 + 10, GLUT_BITMAP_HELVETICA_18, buf);
 
       snprintf(buf, sizeof(buf), "Aperte ESPACO para jogar novamente");
-      renderBitmapString(tamanho/2 - 140, tamanho/2 - 40, GLUT_BITMAP_HELVETICA_18, buf);
+      renderBitmapString(centerX - 160, tamanho/2 - 40, GLUT_BITMAP_HELVETICA_18, buf);
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+
+    glutSwapBuffers();
+}
+
+void telaBoasVindas() {
+    glClearColor(0, 0, 0, 1); 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, tamanho, 0, tamanho);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glColor3f(1.0f, 0.84f, 0.0f); // Cor do texto: amarelo ouro
+
+    float centerX = tamanho / 2.0f;
+    char buf[128];
+
+    snprintf(buf, sizeof(buf), "Bem-vindo ao Labirinto 3D!");
+    renderBitmapString(centerX - 120, tamanho/2 + 100, GLUT_BITMAP_TIMES_ROMAN_24, buf);
+
+    snprintf(buf, sizeof(buf), "Jogar");
+    renderBitmapString(centerX - 30, tamanho/2 + 30, GLUT_BITMAP_TIMES_ROMAN_24, buf);
+
+    snprintf(buf, sizeof(buf), "Instrucoes");
+    renderBitmapString(centerX - 60, tamanho/2 - 30, GLUT_BITMAP_TIMES_ROMAN_24, buf);
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+
+    glutSwapBuffers();
+}
+
+void telaInstrucoes() {
+    glClearColor(0.0f, 0.0f, 0.1f, 1.0f); 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+      glLoadIdentity();
+      gluOrtho2D(0, tamanho, 0, tamanho);
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+      glLoadIdentity();
+
+      float centerX = tamanho / 2.0f;
+
+      glColor3f(1.0f, 0.84f, 0.0f);
+
+      char buf[256];
+
+      snprintf(buf, sizeof(buf), "Instrucoes do Jogo");
+      renderBitmapString(centerX - 120, tamanho/2 + 120, GLUT_BITMAP_TIMES_ROMAN_24, buf);
+
+      glColor3f(1,1,1);
+
+      snprintf(buf, sizeof(buf), "- Movimente-se usando as SETAS do teclado.");
+      renderBitmapString(centerX - 180, tamanho/2 + 60, GLUT_BITMAP_HELVETICA_18, buf);
+
+      snprintf(buf, sizeof(buf), "- Seu objetivo e chegar a area de chegada o mais rapido possivel.");
+      renderBitmapString(centerX - 250, tamanho/2 + 20, GLUT_BITMAP_HELVETICA_18, buf);
+
+      snprintf(buf, sizeof(buf), "- Para sair do jogo, aperte a tecla ESC.");
+      renderBitmapString(centerX - 180, tamanho/2 - 20, GLUT_BITMAP_HELVETICA_18, buf);
+
+      snprintf(buf, sizeof(buf), "Clique com o BOTAO DIREITO para voltar ao menu.");
+      renderBitmapString(centerX - 220, tamanho/2 - 80, GLUT_BITMAP_HELVETICA_18, buf);
 
     glPopMatrix();
     glMatrixMode(GL_PROJECTION);
@@ -86,6 +173,16 @@ void telaCheckpoint() {
 
 
 void display(void) {
+    if (estadoJogo == 0) {
+        telaBoasVindas();
+        return;
+    }
+
+    if (estadoJogo == 2) {
+        telaInstrucoes();
+        return;
+    }
+
     struct timeval now;
     gettimeofday(&now, NULL);
     double dt = (now.tv_sec - prevFrameTime.tv_sec)
@@ -223,6 +320,37 @@ void keyboard(unsigned char key, int x, int y) {
     }
 }
 
+void mouse(int button, int state, int x, int y) {
+    if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+        if (estadoJogo == 2) {
+            estadoJogo = 0; 
+            printf("Voltando para o menu inicial...\n");
+            return;
+        }
+    }
+
+    if (estadoJogo == 0 && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        mouseX = x;
+        mouseY = tamanho - y;
+
+        float centerX = tamanho / 2.0f;
+
+        if (mouseX >= centerX - 50 && mouseX <= centerX + 50 &&
+            mouseY >= tamanho/2 + 20 && mouseY <= tamanho/2 + 50) {
+            estadoJogo = 1;
+            gettimeofday(&tempoInicial, NULL);
+            gettimeofday(&prevFrameTime, NULL);
+            printf("Iniciando jogo...\n");
+        }
+
+        if (mouseX >= centerX - 70 && mouseX <= centerX + 70 &&
+            mouseY >= tamanho/2 - 40 && mouseY <= tamanho/2 - 10) {
+            estadoJogo = 2;
+            printf("Mostrando instruções...\n");
+        }
+    }
+}
+
 void init(void) {
     glShadeModel(GL_SMOOTH);
     glClearDepth(1.0);
@@ -256,6 +384,7 @@ int main(int argc, char** argv) {
     glutSpecialFunc(specialKeys);
     glutSpecialUpFunc(specialKeysUp);
     glutKeyboardFunc(keyboard);
+    glutMouseFunc(mouse);
 
     glutMainLoop();
 
