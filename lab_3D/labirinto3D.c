@@ -5,14 +5,15 @@
 #include <math.h>
 #include <unistd.h>   
 #define M_PI 3.14159265358979323846
-
 #include "stb_image.h"
+
+//texturas
 GLuint texID_teto;
 GLuint texID_parede;
 GLuint texID_chao;
 
 //=========================================================
-
+//constantes de movimento
 #define GIRO_VAL 300
 #define GIRO_ANG (90.0/GIRO_VAL)
 #define MAX_DIST_PAREDE 0.01f
@@ -21,9 +22,11 @@ float sizeX = 0.3f;
 float sizeY = 1.0f;
 
 //=======================================================
-
-
 int Nparedes = 4;
+
+/*paredes do labirinto
+tipo = 0 -parede horizontal
+tipo = 1 - parede vertical*/
 struct coord{
     int tipo; //0 horizontal
     double x1, y1, x2, y2;
@@ -34,29 +37,18 @@ struct lista_paredes{
     struct coord *CO;
 };
 
-// struct labirinto3D{
-//     double posX, posY;
-//     int idx_anguloZ;
-//     int idx_anguloZ_ant;
-//     int giro;
-//     int giro_dir;
-//     int idx_passo;
-//     struct lista_paredes *paredes;
-// };
-
+//protótipos
 void viewport_topo(Labirinto3D* lab3d);
 void viewport_perspectiva(Labirinto3D* lab3d);
-
 void draw_obj();
 void draw_topo(struct lista_paredes *paredes);
 void draw_perspectiva(struct lista_paredes *paredes);
-
 struct lista_paredes *monta_labirinto();
 double distanciaSegmentoReta(double xk, double yk, struct coord *p);
 int pontoDentroSegmentoReta(double xk, double yk, struct coord *p, int tipo_parede);
 
 //=======================================================
-
+//variáveis auxiliares de movimento
 double posXY[2] = {0.0f,0.0f};
 int anguloZTopo[64];
 int anguloZPersp[64];
@@ -71,7 +63,7 @@ const double passo[21] = {-0.0167f, -0.0165f, -0.0160f, -0.0153f, -0.0144f, -0.0
                           -0.0160f, -0.0165f, -0.0167};
 
 //=======================================================
-
+//inicializa tabela de ângulos
 void inicializaAngulos() {
     for(int i = 0; i < NanguloZ; i++) {
         anguloZTopo[i] = (int)(360.0 * i / NanguloZ) % 360;
@@ -80,6 +72,7 @@ void inicializaAngulos() {
 }
 
 void carregaTextura() {
+    //carrega a imagem da textura, guardando parâmetros de altura, largura e canais de cor
     int width, height, nrChannels;
     unsigned char *data = stbi_load("ceu.png", &width, &height, &nrChannels, 0);
     
@@ -87,19 +80,20 @@ void carregaTextura() {
         glGenTextures(1, &texID_teto);
         glBindTexture(GL_TEXTURE_2D, texID_teto);
         
-        // Configura os parâmetros da textura
+        //configura os parâmetros da textura
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         
-        // Carrega a imagem baseada no número de canais
+        //carrega a imagem baseada no número de canais
         GLenum format = GL_RGB;
         if (nrChannels == 4)
             format = GL_RGBA;
         else if (nrChannels == 1)
             format = GL_RED;
         
+        //cria a textura
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
         
@@ -111,6 +105,7 @@ void carregaTextura() {
 }
 
 void carregaTexturaParede() {
+    //carrega a imagem da textura, guardando parâmetros de altura, largura e canais de cor
     int width, height, nrChannels;
     const char *fname = "parede.png";
 
@@ -128,15 +123,20 @@ void carregaTexturaParede() {
     }
     printf("Carregou %dx%d, %d canais\n", width, height, nrChannels);
 
+    //configura os parâmetros da textura
     glGenTextures(1, &texID_parede);
     glBindTexture(GL_TEXTURE_2D, texID_parede);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    //carrega a imagem baseada no número de canais
     GLenum format = (nrChannels == 4 ? GL_RGBA :
                      nrChannels == 1 ? GL_RED :
                      GL_RGB);
+
+    //cria a textura
     glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format,
                  GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
@@ -145,6 +145,7 @@ void carregaTexturaParede() {
 }
 
 void carregaTexturaChao() {
+    //carrega a imagem da textura, guardando parâmetros de altura, largura e canais de cor
     int width, height, nrChannels;
     unsigned char *data = stbi_load("chao.png", &width, &height, &nrChannels, 0);
     if (!data) {
@@ -152,6 +153,7 @@ void carregaTexturaChao() {
         exit(1);
     }
 
+     //configura os parâmetros da textura
     glGenTextures(1, &texID_chao);
     glBindTexture(GL_TEXTURE_2D, texID_chao);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -159,9 +161,12 @@ void carregaTexturaChao() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+    //carrega a imagem baseada no número de canais
     GLenum fmt = (nrChannels == 4 ? GL_RGBA :
                   nrChannels == 1 ? GL_RED :
                   GL_RGB);
+
+    //cria a textura
     glTexImage2D(GL_TEXTURE_2D, 0, fmt, width, height, 0, fmt, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
 
@@ -172,6 +177,7 @@ void carregaTexturaChao() {
 Labirinto3D* cria_labirinto3D(){
     Labirinto3D* lab3d = malloc(sizeof(Labirinto3D));
     if(lab3d != NULL){
+        //valores inciais para posição, ângulo e estado de movimento
         lab3d->posX = 1.0 - TAM/2;
         lab3d->posY = -1.0 + TAM/2;
         lab3d->idx_anguloZ = 32;
@@ -184,9 +190,11 @@ Labirinto3D* cria_labirinto3D(){
         lab3d->anguloGiro = 0.0f;
         lab3d->velocidadeGiro = 0.01f;
 
+        //valores inciais para âmgulos e paredes
         inicializaAngulos();
-
         lab3d->paredes = monta_labirinto();
+
+        //valores inciais para movimentação e estamina
         lab3d->movendoFrente = lab3d->movendoTras = 0;
         lab3d->maxStamina = 10.0f;       
         lab3d->stamina = lab3d->maxStamina;
@@ -197,6 +205,8 @@ Labirinto3D* cria_labirinto3D(){
     return lab3d;
 }
 
+
+//libera as estruturas do labirinto
 void destroi_labirinto3D(Labirinto3D* lab3d){
     free(lab3d->paredes->CO);
     free(lab3d->paredes);
@@ -208,11 +218,13 @@ void viraEsquerda(Labirinto3D* lab3d){
     if(lab3d == NULL)
         return;
 
+    //verifica giro e inicia rotação para esquerda
     if(lab3d->giro == 0){
         lab3d->giro = GIRO_VAL;
         lab3d->giro_dir = -1;
         lab3d->idx_anguloZ_ant = lab3d->idx_anguloZ;
 
+        //atualiza índice do ângulo (circular)
         lab3d->idx_anguloZ--;
         if(lab3d->idx_anguloZ < 0)
             lab3d->idx_anguloZ = NanguloZ - 1;
@@ -223,29 +235,34 @@ void viraDireita(Labirinto3D* lab3d){
     if(lab3d == NULL)
         return;
 
+    //verifica giro e inicia rotação para direita
     if(lab3d->giro == 0){
         lab3d->giro = GIRO_VAL;
         lab3d->giro_dir = +1;
         lab3d->idx_anguloZ_ant = lab3d->idx_anguloZ;
 
+        //atualiza índice do ângulo (circular)
         lab3d->idx_anguloZ = (lab3d->idx_anguloZ + 1) % NanguloZ;
     }
-    //printf("verificar parede %d\n",lab3d->idx_anguloZ %2);
 }
 
 double distanciaSegmentoReta(double xk, double yk, struct coord *p){
+    //produto vetorial ao quadrado
     double numerador = (xk - p->x1) * (p->y2 - p->y1) -
                        (yk - p->y1) * (p->x2 - p->x1);
     numerador = numerador * numerador;
 
+    //quadrado do comprimento do segmento
     double denominador = (p->x1 - p->x2) * (p->x1 - p->x2) +
                          (p->y1 - p->y2) * (p->y1 - p->y2);
 
+    //distância da reta ao ponto
     double t = fabs(numerador / denominador);
     return t;
 }
 
 int pontoDentroSegmentoReta(double xk, double yk, struct coord *p, int tipo_parede){
+    //verifica se o ponto está dentro dos limites do segmento
     if(tipo_parede == 0){
         ///parede horizontal
         if((p->x1 <= xk && xk <= p->x2) || (p->x2 <= xk && xk <= p->x1))
@@ -263,15 +280,17 @@ void caminhaXY(Labirinto3D* lab3d, double dx, double dy, int frente){
     if(lab3d == NULL)
         return;
 
+    //calcula a nova posição após translação de dx e dy
     double xk = lab3d->posX + dx;
     double yk = lab3d->posY + dy;
     double dist_antes, dist_depois;
 
     int i, caminha = 1;
-    int tipo_parede = (fabs(dx) > fabs(dy)) ? 1 : 0; // 1 para vertical, 0 para horizontal
+    int tipo_parede = (fabs(dx) > fabs(dy)) ? 1 : 0; //1 = vertical, 0 = horizontal
 
     struct lista_paredes *paredes = lab3d->paredes;
 
+    //verifica colisão
     for(i = 0; i < paredes->qtd; i++){
         if(paredes->CO[i].tipo == tipo_parede){
 
@@ -289,6 +308,7 @@ void caminhaXY(Labirinto3D* lab3d, double dx, double dy, int frente){
         }
     }
 
+    //atualiza posição
     if(caminha){
         lab3d->posX = xk;
         lab3d->posY = yk;
@@ -307,6 +327,7 @@ void caminhaPraFrente(Labirinto3D* lab3d){
     if(lab3d == NULL) return;
     if(lab3d->giro > 0) return;
 
+    //calcula deslocamento baseado no ângulo atual e atualiza a posição
     double angle = anguloZTopo[lab3d->idx_anguloZ] * M_PI / 180.0;
     double dx = -incr * sin(angle);
     double dy = -incr * cos(angle);
@@ -317,6 +338,7 @@ void caminhaPraTras(Labirinto3D* lab3d){
     if(lab3d == NULL) return;
     if(lab3d->giro > 0) return;
 
+    //calcula deslocamento baseado no ângulo atual e atualiza a posição
     double angle = anguloZTopo[lab3d->idx_anguloZ] * M_PI / 180.0;
     double dx = incr * sin(angle);
     double dy = incr * cos(angle);
@@ -327,11 +349,11 @@ void desenha_labirinto3d(Labirinto3D* lab3d){
     if(lab3d == NULL)
         return;
 
-    //viewport_topo(lab3d);
+    //se a tecla X estiver na opção de desenhar o topo, renderiza essa visão
     if (mostrarTopo) {
         viewport_topo(lab3d);
     }
-    viewport_perspectiva(lab3d);
+    viewport_perspectiva(lab3d); //renderiza visão em perspectiva
 }
 
 //=======================================================
@@ -339,18 +361,18 @@ void viewport_perspectiva(Labirinto3D* lab3d){
     if(lab3d == NULL)
         return;
 
+    //configura viewport e projeção de perspectiva
     glViewport(0,0,tamanho,tamanho);
-
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-
     gluPerspective(45.0,1.0,0.01,200.0);
 
+    //prepara o modelview para a câmera
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
-
     glRotatef(-90, 1.0f, 0.0f, 0.0f); //ajusta a visao
 
+    //aplica a rotação de giro suave
     if(lab3d->giro > 0) {
         lab3d->giro--;
         float angle_step = 360.0f / NanguloZ;
@@ -367,12 +389,12 @@ void viewport_perspectiva(Labirinto3D* lab3d){
 }
 
 void draw_perspectiva(struct lista_paredes *paredes) {
-    // 1) PISO TEXTURIZADO
+    //desenha chão texturizado
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texID_chao);
     glColor3f(1.0f, 1.0f, 1.0f);
     glBegin(GL_QUADS);
-      // repete N×N tiles (uma célula por tile)
+      //repete N×N tiles (uma célula por tile)
       glTexCoord2f(0.0f, 0.0f);        glVertex3f( 1.0f,  1.0f, 0.0f);
       glTexCoord2f((float)N, 0.0f);    glVertex3f( 1.0f, -1.0f, 0.0f);
       glTexCoord2f((float)N, (float)N);glVertex3f(-1.0f, -1.0f, 0.0f);
@@ -381,7 +403,7 @@ void draw_perspectiva(struct lista_paredes *paredes) {
     glBindTexture(GL_TEXTURE_2D, 0);
     glDisable(GL_TEXTURE_2D);
 
-    // 2) TETO TEXTURIZADO
+    //desenha teto texturizado
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texID_teto);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -398,7 +420,7 @@ void draw_perspectiva(struct lista_paredes *paredes) {
     const float t = 0.05f;   // meia-espessura no plano XY
     const float h = 0.3f;   // altura em Z
 
-    // 3) PAREDES TEXTURIZADAS
+    //desenha paredes texturizadas
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texID_parede);
     glColor3f(1.0f, 1.0f, 1.0f);
@@ -410,11 +432,11 @@ void draw_perspectiva(struct lista_paredes *paredes) {
         float len = sqrtf(dx*dx + dy*dy);
         if (len < 1e-6f) continue;
 
-        // deslocamento perpendicular ao segmento
+        //deslocamento perpendicular ao segmento
         float ox =  dy / len * t;
         float oy = -dx / len * t;
 
-        // Face frontal da parede
+        //face frontal da parede
         glBegin(GL_QUADS);
           glTexCoord2f(0.0f, 0.0f); glVertex3f(p->x1 + ox, p->y1 + oy, 0.0f);
           glTexCoord2f(1.0f, 0.0f); glVertex3f(p->x2 + ox, p->y2 + oy, 0.0f);
@@ -422,7 +444,7 @@ void draw_perspectiva(struct lista_paredes *paredes) {
           glTexCoord2f(0.0f, 1.0f); glVertex3f(p->x1 + ox, p->y1 + oy,    h);
         glEnd();
 
-        // Face traseira da parede
+        //face traseira da parede
         glBegin(GL_QUADS);
           glTexCoord2f(0.0f, 0.0f); glVertex3f(p->x2 - ox, p->y2 - oy, 0.0f);
           glTexCoord2f(1.0f, 0.0f); glVertex3f(p->x1 - ox, p->y1 - oy, 0.0f);
@@ -430,7 +452,7 @@ void draw_perspectiva(struct lista_paredes *paredes) {
           glTexCoord2f(0.0f, 1.0f); glVertex3f(p->x2 - ox, p->y2 - oy,    h);
         glEnd();
 
-        // Topo da parede
+        //topo da parede
         glBegin(GL_QUADS);
           glTexCoord2f(0.0f, 0.0f); glVertex3f(p->x1 + ox, p->y1 + oy,    h);
           glTexCoord2f(1.0f, 0.0f); glVertex3f(p->x2 + ox, p->y2 + oy,    h);
@@ -448,20 +470,25 @@ void viewport_topo(Labirinto3D* lab3d){
     if(lab3d == NULL)
         return;
 
+    //configura viewport e projeção de perspectiva
     glViewport(3*tamanho/4.0 - 20,5,tamanho/4,tamanho/4);
-
     glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
 
+    //prepara o modelview para desenha o topo
     glMatrixMode( GL_MODELVIEW );
     glLoadIdentity();
 
+    //desenha o mapa
     glPushMatrix();
         draw_topo(lab3d->paredes);
     glPopMatrix();
 
+    //desenha o jogador no mapa
     glPushMatrix();
     glTranslatef(lab3d->posX,lab3d->posY,0.0f);
+
+    //aplica a rotação de giro suave
     if(lab3d->giro > 0) {
         lab3d->giro--;
         float angle_step = 360.0f / NanguloZ;
@@ -470,7 +497,7 @@ void viewport_topo(Labirinto3D* lab3d){
     } else {
         glRotatef(-anguloZTopo[lab3d->idx_anguloZ], 0.0f, 0.0f, 1.0f);
     }
-        draw_obj();
+        draw_obj(); //triângulo representando o jogador
     glPopMatrix();
 }
 
@@ -484,8 +511,9 @@ void draw_obj(){
 }
 
 void draw_topo(struct lista_paredes *paredes){
+    //desenha o contorno
     glLineWidth(2);
-    glColor3f(0.0f, 0.0f, 0.0f);     // contorno
+    glColor3f(0.0f, 0.0f, 0.0f);    
     glBegin(GL_LINE_LOOP);
         glVertex3f( 1.0f, 1.0f, 0.0f);
         glVertex3f( 1.0f,-1.0f, 0.0f);
@@ -493,6 +521,7 @@ void draw_topo(struct lista_paredes *paredes){
         glVertex3f(-1.0f, 1.0f, 0.0f);
     glEnd();
 
+    //desenha paredes internas (azul)
     int i;
     glColor3f(0.0,0.0,1.0);
     glLineWidth(2);
@@ -504,8 +533,9 @@ void draw_topo(struct lista_paredes *paredes){
         glEnd();
     }
 
+    //desenha plano de fundo (cinza claro)
     glBegin(GL_QUADS);
-        glColor3f(0.95f, 0.95f, 0.95f);     // plane
+        glColor3f(0.95f, 0.95f, 0.95f);    
         glVertex3f( 1.0f, 1.0f, 0.0f);
         glVertex3f( 1.0f,-1.0f, 0.0f);
         glVertex3f(-1.0f,-1.0f, 0.0f);
@@ -515,7 +545,7 @@ void draw_topo(struct lista_paredes *paredes){
 }
 
 void insere_parede(struct lista_paredes *li, double x1, double y1, double x2, double y2, int tipo){
-    if(li->qtd == li->MAX){ /// aumenta o tamanho da lista quando necess�rio
+    if(li->qtd == li->MAX){ //aumenta o tamanho da lista quando necessario
         li->MAX = li->MAX * 1.5;
         struct coord *CO = realloc(li->CO,li->MAX * sizeof(struct coord));
         if(CO == NULL){
@@ -526,7 +556,7 @@ void insere_parede(struct lista_paredes *li, double x1, double y1, double x2, do
 
         li->CO = CO;
     }
-    ///insere a parede na lista
+    //insere a parede na lista
     li->CO[li->qtd].tipo = tipo;
     li->CO[li->qtd].x1 = x1;
     li->CO[li->qtd].y1 = y1;
@@ -537,9 +567,11 @@ void insere_parede(struct lista_paredes *li, double x1, double y1, double x2, do
 
 struct lista_paredes *monta_labirinto(){
     int i,j;
+
+    //grafo NxN vértices para gerar o labirinto
     Grafo* gr = cria_Grafo(N*N, 4);
 
-    ///insere as arestas no grafo
+    //insere as arestas no grafo
     for(i=0; i<N; i++){
         for(j=0; j<N; j++){
             int v1 = i * N + j;
@@ -558,39 +590,39 @@ struct lista_paredes *monta_labirinto(){
     }
 
     
-    ///calcula a �rvore geradora
+    //calcula a árvore geradora
     int *arv = malloc(N*N*sizeof(int));
     arvoreGeradoraMinimaPRIM_Grafo(gr, 0, arv);
     libera_Grafo(gr);
 
-    ///inicia a lista de paredes
+    //inicia a lista de paredes
     struct lista_paredes *li;
     li = malloc(sizeof(struct lista_paredes));
     li->qtd = 0;
     li->MAX = 500;
     li->CO = malloc(500*sizeof(struct coord));
 
-    ///calcula as paredes
+    //calcula as paredes
     for(i=0; i<N; i++){
         for(j=0; j<N; j++){
             int v1 = i * N + j;
             if(j+1 < N){
                 int v2 = i * N + (j+1);
                 if(arv[v2] != v1 && arv[v1] != v2){
-                    ///parede vertical
+                    //parede vertical
                     insere_parede(li, MAT2X(j+1), MAT2Y(i), MAT2X(j+1), MAT2Y(i+1), 1);
                 }
             }
             if(i+1 < N){
                 int v2 = (i+1) * N + j;
                 if(arv[v2] != v1 && arv[v1] != v2){
-                    ///parede horizontal
+                    //parede horizontal
                     insere_parede(li, MAT2X(j), MAT2Y(i+1), MAT2X(j+1), MAT2Y(i+1), 0);
                 }
             }
         }
     }
-    ///insere as paredes de fora
+    //insere as paredes de fora
     insere_parede(li, MAT2X(0.025), MAT2Y(0.025),MAT2X(0.025), MAT2Y(N-0.025),1);
     insere_parede(li, MAT2X(0.025), MAT2Y(N-0.025),MAT2X(N-0.025), MAT2Y(N-0.025),0);
     insere_parede(li, MAT2X(N-0.025), MAT2Y(0.025),MAT2X(N-0.025), MAT2Y(N-0.025),1);
