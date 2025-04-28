@@ -18,15 +18,30 @@ O projeto foi desenvolvido utilizando **OpenGL**, **GLUT** e  **Linguagem C** .
 
 ---
 
-## ⚙️ Compilação
+## Compilação
 
-Certifique-se de ter as bibliotecas **OpenGL** e **GLUT** instaladas.  
-(Exemplo: `sudo apt install freeglut3-dev` para Linux ou `brew install freeglut` para MacOS.)
+Certifique-se de ter as bibliotecas OpenGL e GLUT instaladas (ex: `sudo apt install freeglut3-dev` ou `brew install freeglut
+`).
 
-Para Windows, configure o **MinGW** com suporte às bibliotecas `freeglut`, `opengl32` e `glu32`.
+Certifique-se de ter o MinGW configurado corretamente com as bibliotecas freeglut, opengl32 e glu32 para windows.
+
 
 ### Linux
 
+```bash
+gcc main.c Labirinto.c Grafo.c -o app -lGL -lGLU -lglut -lm
+```
+### MacOS
+
+```bash
+clang main.c Labirinto.c Grafo.c -framework OpenGL -framework GLUT -lm -o app
+```
+
+### Windows
+
+```bash
+gcc main.c Labirinto.c Grafo.c -o app.exe -lglu32 -lopengl32 -lfreeglut -lm
+```
 ---
 
 ## 📁 Estrutura do Projeto
