@@ -6,7 +6,6 @@
 #include <unistd.h>   
 #define M_PI 3.14159265358979323846
 
-#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 GLuint texID_teto;
 GLuint texID_parede;
