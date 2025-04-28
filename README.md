@@ -69,8 +69,33 @@ gcc main.c Labirinto.c Grafo.c -o app.exe -lglu32 -lopengl32 -lfreeglut -lm
 <img src="https://drive.google.com/uc?export=view&id=1CuqGuUcwQ2W1bw6TrmJZIHhvf3JS2y2q" width="300px" style="border: 2px solid #ccc; border-radius: 10px; box-shadow: 2px 2px 10px #aaa; margin: 10px;">
 
 </div>
+
+## 🛠️ Problemas Conhecidos
+
+- 🚧 **Colisão nas paredes**: Atualmente a colisão com as paredes do labirinto pode apresentar imperfeições, permitindo que o jogador atravesse barreiras em situações específicas.
+
 ---
 
+## 🚀 Melhorias Futuras
+
+- 🔥 **Níveis de Dificuldade**:  
+  Implementar a possibilidade de o usuário selecionar a dificuldade do labirinto antes de iniciar o jogo.
+
+- 💡 **Foco de Luz no Labirinto**:  
+  Terminar a implementação de foco de luz no labirinto, permitindo que o usuário tenha uma visão clara apenas da direção para onde está se movendo, aumentando a imersão e a dificuldade.
+
+---
+
+## 🛠️ Como Melhorar
+
+- **Implementação de Níveis de Dificuldade**:
+  - A dificuldade pode ser controlada aumentando o **tamanho do labirinto**. Essa alteração pode ser feita **modificando dinamicamente a variável `N`**, que define a dimensão do labirinto (`N x N`).
+    
+- **Melhoria do Foco de Luz**:
+  - Finalizar a implementação do **efeito de sombra (border shadow)**, suavizando a visão até o centro do foco.
+  - O foco deve acompanhar a posição e a direção do usuário, mantendo o centro iluminado e escurecendo as bordas para aumentar a sensação de desafio e imersão.
+
+---
 ## 🧑‍💻 Integrantes
 <div align="center">
 
