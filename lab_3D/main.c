@@ -26,6 +26,8 @@ double tempoDecorridoAtual = 0.0;
 int movendoFrente = 0, movendoTras = 0;
 int shiftDown = 0;
 
+int mostrarTopo = 1;
+
 Labirinto3D *lab3d;
 
 void renderBitmapString(float x, float y, void *font, const char *string) {
@@ -51,7 +53,7 @@ void checaCheckpoint(Labirinto3D *lab3d) {
     double dx = lab3d->posX - metaX;
     double dy = lab3d->posY - metaY;
 
-    // Salva todos os estados atuais
+    if(mostrarTopo){// Salva todos os estados atuais
     GLint viewport[4];
     glGetIntegerv(GL_VIEWPORT, viewport);
     glMatrixMode(GL_PROJECTION);
@@ -87,7 +89,7 @@ void checaCheckpoint(Labirinto3D *lab3d) {
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
-    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);}
 
     if (dx*dx + dy*dy <= raioCheckpoint * raioCheckpoint) {
         chegou = 1;
@@ -172,6 +174,7 @@ void display(void) {
     }
 
     desenha_labirinto3d(lab3d);
+
 
     checaCheckpoint(lab3d);
 
@@ -263,6 +266,10 @@ void keyboard(unsigned char key, int x, int y) {
         chegou = 0;
         gettimeofday(&tempoInicial, NULL); // reseta tempo
         tempoDecorridoAtual = 0.0;
+    }
+    if (key == 'x' || key == 'X') { // Tecla x para alternar visão do topo
+        mostrarTopo = !mostrarTopo;
+        glutPostRedisplay();
     }
 }
 
